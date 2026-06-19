@@ -728,7 +728,7 @@ function saveSettingsKey() {
   const val = document.getElementById('settingsApiKey').value.trim();
   const statusEl = document.getElementById('settingsKeyStatus');
   if (!val || val.includes('••')) { showToast('Masukkan API key baru', '#888'); return; }
-  if (!val.startsWith('AIza')) { statusEl.textContent = '✗ Format tidak valid (harus diawali AIza...)'; statusEl.className = 'key-status err'; return; }
+  if (val.length < 10) { statusEl.textContent = '✗ Key terlalu pendek'; statusEl.className = 'key-status err'; return; }
   localStorage.setItem('ct_apikey', val);
   statusEl.textContent = '✓ Tersimpan'; statusEl.className = 'key-status ok';
   updateAiBtn();
