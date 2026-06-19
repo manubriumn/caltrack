@@ -398,7 +398,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
     <div class="sheet-section">
       <div class="sheet-section-label">API Key</div>
       <div class="sheet-field">
-        <label>Claude API Key</label>
+        <label>Gemini API Key</label>
         <div class="input-row">
           <div class="input-wrap" style="flex:1">
             <input type="password" id="settingsApiKey" placeholder="AIza..." autocomplete="off">
@@ -535,7 +535,7 @@ function startApp() {
     tdee, targetKcal, macroProtein, macroCarb, macroFat };
   localStorage.setItem('ct_profile', JSON.stringify(profile));
 
-  if (key && key.startsWith('sk-ant')) localStorage.setItem('ct_apikey', key);
+  if (key.trim()) localStorage.setItem('ct_apikey', key.trim());
 
   streak = 1;
   localStorage.setItem('ct_streak', '1');
@@ -556,7 +556,13 @@ async function verifyKey() {
       body: JSON.stringify({ contents: [{ parts: [{ text: 'hi' }] }], generationConfig: { maxOutputTokens: 5 } })
     });
     if (res.ok) { statusEl.textContent = '✓ API key valid'; statusEl.className = 'key-status ok'; }
-    else { statusEl.textContent = '✗ Key tidak valid'; statusEl.className = 'key-status err'; }
+    else {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 429) statusEl.textContent = '⚠ Rate limit Gemini tercapai';
+      else if (res.status === 401 || res.status === 403) statusEl.textContent = '✗ API key tidak valid';
+      else statusEl.textContent = '✗ ' + (err.error?.message || 'Gagal verifikasi');
+      statusEl.className = 'key-status err';
+    }
   } catch { statusEl.textContent = '✗ Gagal terhubung'; statusEl.className = 'key-status err'; }
 }
 
@@ -712,7 +718,11 @@ async function openAILookup() {
     document.getElementById('foodCarb').value = p.carb;
     document.getElementById('foodFat').value = p.fat;
   } catch (e) {
-    r.innerHTML = 'Gagal. Cek API key di Settings, atau isi manual.';
+    if (String(e).includes('429')) {
+      r.innerHTML = 'Rate limit Gemini tercapai. Coba lagi beberapa saat.';
+    } else {
+      r.innerHTML = 'Gagal. Cek API key atau koneksi internet.';
+    }
   }
   btn.disabled = false;
 }
@@ -728,8 +738,7 @@ function saveSettingsKey() {
   const val = document.getElementById('settingsApiKey').value.trim();
   const statusEl = document.getElementById('settingsKeyStatus');
   if (!val || val.includes('••')) { showToast('Masukkan API key baru', '#888'); return; }
-  if (val.length < 10) { statusEl.textContent = '✗ Key terlalu pendek'; statusEl.className = 'key-status err'; return; }
-  localStorage.setItem('ct_apikey', val);
+  localStorage.setItem('ct_apikey', val.trim());
   statusEl.textContent = '✓ Tersimpan'; statusEl.className = 'key-status ok';
   updateAiBtn();
   showToast('✓ API key disimpan');
