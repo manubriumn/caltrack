@@ -227,12 +227,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         <div class="step-label">API Key (opsional)</div>
         <div class="step-desc">
           Untuk fitur AI lookup kalori. Dapetin gratis di
-          <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
-          — plan gratis ada $5 credit.
+          <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a>
+          — 100% gratis, tanpa kartu kredit.
         </div>
         <div class="input-row">
           <div class="input-wrap">
-            <input type="password" id="setupApiKey" placeholder="sk-ant-api03-..." spellcheck="false" autocomplete="off">
+            <input type="password" id="setupApiKey" placeholder="AIza..." spellcheck="false" autocomplete="off">
             <button class="eye-btn" onclick="toggleKeyVis('setupApiKey',this)">👁</button>
           </div>
           <button onclick="verifyKey()" style="background:var(--surface2);border:1px solid var(--border);
@@ -401,7 +401,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
         <label>Claude API Key</label>
         <div class="input-row">
           <div class="input-wrap" style="flex:1">
-            <input type="password" id="settingsApiKey" placeholder="sk-ant-api03-..." autocomplete="off">
+            <input type="password" id="settingsApiKey" placeholder="AIza..." autocomplete="off">
             <button class="eye-btn" onclick="toggleKeyVis('settingsApiKey',this)">👁</button>
           </div>
         </div>
@@ -550,10 +550,10 @@ async function verifyKey() {
   if (!key) { statusEl.textContent = 'Masukkan API key dulu'; statusEl.className = 'key-status err'; return; }
   statusEl.textContent = 'Mengecek...'; statusEl.className = 'key-status checking';
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: 'hi' }] }], generationConfig: { maxOutputTokens: 5 } })
     });
     if (res.ok) { statusEl.textContent = '✓ API key valid'; statusEl.className = 'key-status ok'; }
     else { statusEl.textContent = '✗ Key tidak valid'; statusEl.className = 'key-status err'; }
@@ -684,7 +684,7 @@ async function openAILookup() {
   const name = document.getElementById('foodName').value.trim();
   const key = localStorage.getItem('ct_apikey');
   if (!name) { showToast('Tulis nama makanan dulu', '#888'); return; }
-  if (!key) { showToast('Tambahkan API key di ⚙ Settings', '#fb923c'); return; }
+  if (!key) { showToast('Tambahkan Gemini API key di ⚙ Settings', '#fb923c'); return; }
 
   const r = document.getElementById('aiResult');
   const btn = document.getElementById('aiBtn');
@@ -693,16 +693,16 @@ async function openAILookup() {
   btn.disabled = true;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001', max_tokens: 200,
-        messages: [{ role: 'user', content: `Estimasi nilai gizi untuk: "${name}" (1 porsi biasa Indonesia). Balas HANYA JSON ini tanpa penjelasan: {"kcal":300,"protein":20,"carb":40,"fat":10,"note":"1 porsi ~200g"}` }]
+        contents: [{ parts: [{ text: `Estimasi nilai gizi untuk: "${name}" (1 porsi biasa Indonesia). Balas HANYA JSON ini tanpa penjelasan apapun: {"kcal":300,"protein":20,"carb":40,"fat":10,"note":"1 porsi ~200g"}` }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 200 }
       })
     });
     const data = await res.json();
-    const text = data.content?.[0]?.text || '';
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const match = text.match(/\{[\s\S]*?\}/);
     if (!match) throw new Error();
     const p = JSON.parse(match[0]);
@@ -728,7 +728,7 @@ function saveSettingsKey() {
   const val = document.getElementById('settingsApiKey').value.trim();
   const statusEl = document.getElementById('settingsKeyStatus');
   if (!val || val.includes('••')) { showToast('Masukkan API key baru', '#888'); return; }
-  if (!val.startsWith('sk-ant')) { statusEl.textContent = '✗ Format tidak valid'; statusEl.className = 'key-status err'; return; }
+  if (!val.startsWith('AIza')) { statusEl.textContent = '✗ Format tidak valid (harus diawali AIza...)'; statusEl.className = 'key-status err'; return; }
   localStorage.setItem('ct_apikey', val);
   statusEl.textContent = '✓ Tersimpan'; statusEl.className = 'key-status ok';
   updateAiBtn();
